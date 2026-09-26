@@ -55,7 +55,7 @@ eBPF is a Linux kernel feature. On a Mac, run it in a lightweight VM with
 
 ```bash
 brew install lima
-limactl start --name=bpf --cpus=4 --memory=8 template://ubuntu-lts
+limactl start --name=bpf --cpus=4 --memory=4 template://ubuntu-lts
 limactl shell bpf
 ```
 
