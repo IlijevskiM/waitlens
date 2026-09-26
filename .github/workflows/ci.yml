@@ -1,0 +1,22 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config \
+            cmake g++ libgtest-dev linux-tools-common linux-tools-generic
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+      # GitHub's Ubuntu runners allow sudo and BPF, so the real thing runs here.
+      - name: End-to-end BPF test
+        run: bash tests/integration.sh build

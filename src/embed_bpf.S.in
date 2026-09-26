@@ -1,0 +1,10 @@
+/* bakes the compiled BPF object into the waitlens binary so you don't have
+ * to ship a separate .o file (same idea as bpftool skeletons) */
+    .section .rodata
+    .balign 8
+    .global waitlens_bpf_obj
+waitlens_bpf_obj:
+    .incbin "@BPF_OBJ@"
+    .global waitlens_bpf_obj_end
+waitlens_bpf_obj_end:
+    .section .note.GNU-stack,"",%progbits
