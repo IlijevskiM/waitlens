@@ -66,7 +66,7 @@ limactl shell bpf
 sudo apt-get update
 sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config cmake g++ \
     libgtest-dev linux-tools-common linux-tools-generic
-git clone https://github.com/<you>/waitlens && cd waitlens
+git clone https://github.com/IlijevskiM/waitlens && cd waitlens
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
 ctest --test-dir build                  # unit tests (no root needed)
 bash tests/integration.sh build         # end-to-end with BPF (uses sudo)
