@@ -34,14 +34,15 @@ directly in the kernel with near-zero overhead.
 Profiling [itch-orderbook](https://github.com/IlijevskiM/itch-orderbook) replaying 5M messages
 in pipeline mode (decode thread → lock-free ring → book thread):
 
-1. **Hot-path page faults.** The book thread, which must never stall, took **9,268 page faults**:
+1. **Hot-path page faults.** The book thread, which must never stall, took **9,265 page faults**:
    first-touch faults from the order pool growing and from `std::map` allocating price-level
    nodes. Pre-growing the pool and moving the level maps onto a `std::pmr` pool over a
    pre-faulted arena cut book-thread faults to **28** (99.7% fewer) and raised pipeline
-   throughput about 9%.
+   throughput about 8% (median of 22 runs each, alternating builds). The faults didn't vanish,
+   they moved: the main thread now takes them at startup, before any data flows.
 2. **The p99 tail is preemption, not code.** The worker threads spin rather than block, yet
-   nearly every context switch in the process was a preemption (128 of 134), with run-queue waits up to
-   ~2 ms. On a machine with few cores the tail latency comes from the scheduler, so the fix is
+   nearly every context switch in the process was a preemption (123 of 128), with run-queue waits up to
+   ~4 ms. On a machine with few cores the tail latency comes from the scheduler, so the fix is
    CPU pinning / isolated cores, not micro-optimizing the book.
 
 (Measured on a 2-vCPU Linux VM with a synthetic stream.)
@@ -94,7 +95,7 @@ sudo ./build/waitlens --folded offcpu.folded -- ./build/workload 5 4
 slow work, an occasional blocking "backend call", and memory that page-faults on first touch.
 waitlens's top stacks point straight at `demo::update_shared_stats` (futex waits) and
 `demo::fetch_from_backend` (nanosleep). Run `./build/workload 3 4 --fixed` to see the throughput
-after moving the slow work out of the lock (about 1.8x on a 2-vCPU VM).
+after moving the slow work out of the lock (about 1.7x on a 2-vCPU VM).
 
 ## Benchmarking
 
@@ -104,11 +105,12 @@ How each number is measured (results go in `RESULTS.md` with the machine and exa
 |---|---|
 | overhead | run `workload 5 4 --fixed` alone vs. under waitlens (with and without `--no-faults`), compare req/s over 5 runs |
 | hot-path faults before/after | profile itch-orderbook before and after the pool/arena change; read "page faults by thread" |
-| throughput change | `replay <file> --mode pipeline`, best of 5, before and after |
+| throughput change | `replay <file> --mode pipeline` before and after, alternating builds, median of many runs |
 | preemption finding | "context switches ... of them preemptions" and the run-queue histogram |
 
-Measured here on a 2-vCPU VM: scheduler tracing alone was within run-to-run noise (about 1%);
-adding every-fault page-fault sampling cost about 8% on a fault-heavy workload.
+Measured on a 2-vCPU VM (median of 7 runs each): scheduler tracing alone cost about 1.4%
+(23,384 -> 23,055 req/s); adding every-fault page-fault tracking cost about 9% (21,284 req/s),
+since this demo deliberately faults a lot.
 
 ## Design decisions
 
